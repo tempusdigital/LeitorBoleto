@@ -1,0 +1,18 @@
+﻿@model BoletoViewModel
+@{
+    Layout = "_Layout";
+}
+<form method="post" enctype="multipart/form-data" asp-controller="GerarBoleto" asp-action="Index">
+    <label for="boleto">Extrair linha digitável do boleto:</label><br>
+    <input type="file" name="file" />
+    <input type="submit" value="Enviar" />
+    @if (!string.IsNullOrEmpty(Model.LinhaBoleto))
+    {
+        <p>Linha digitável: <b>@Model.LinhaBoleto</b></p>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.MensagemErro))
+    {
+        <p style="color:red">@Model.MensagemErro</p>
+    }
+</form>
