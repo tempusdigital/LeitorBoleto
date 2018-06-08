@@ -2,13 +2,14 @@
 @{
     Layout = "_Layout";
 }
-<form method="post" enctype="multipart/form-data" asp-controller="GerarBoleto" asp-action="Index">
+<form method="post" enctype="multipart/form-data" asp-controller="GerarBoleto" asp-action="Index" onsubmit="desabilitarBotao()">
     <label for="boleto">Extrair linha digitável do boleto:</label><br>
     <input type="file" name="file" />
-    <input type="submit" value="Enviar" />
+    <input type="submit" value="Enviar" id="enviar" />
     @if (!string.IsNullOrEmpty(Model.LinhaBoleto))
     {
-        <p>Linha digitável: <b>@Model.LinhaBoleto</b></p>
+        <p>Linha digitável:</p>
+        <p><b>@Model.LinhaBoleto</b></p>
     }
 
     @if (!string.IsNullOrEmpty(Model.MensagemErro))
@@ -16,3 +17,8 @@
         <p style="color:red">@Model.MensagemErro</p>
     }
 </form>
+<script>
+    function desabilitarBotao() {
+        document.getElementById("enviar").disabled = true;
+    }
+</script>

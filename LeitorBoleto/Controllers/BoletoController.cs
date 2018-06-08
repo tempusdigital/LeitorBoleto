@@ -24,16 +24,15 @@ namespace LeitorBoleto.Controllers
             if (file is null)
                 return View("/Views/Home/Index.cshtml", new BoletoViewModel { LinhaBoleto = "" });
 
-            try
-            {
-                var boleto = new Boleto(file).ObterCodigoBarras(_configuration["GoogleCredentialsPath"]);
-                return View("/Views/Home/Index.cshtml", new BoletoViewModel { LinhaBoleto = string.IsNullOrWhiteSpace(boleto) ? "Não foi possível obter a linha digitável" : boleto });
-            }
-            catch (Exception ex)
-            {
-                return View("/Views/Home/Index.cshtml", new BoletoViewModel { LinhaBoleto = "", MensagemErro = "Ops! Houve uma falha: " + ex.Message  });
-            }
-
+            //try
+            //{
+            var boleto = new Boleto(file).ObterCodigoBarras(_configuration["GoogleCredentialsPath"]);
+            return View("/Views/Home/Index.cshtml", new BoletoViewModel { LinhaBoleto = string.IsNullOrWhiteSpace(boleto) ? "Não foi possível obter a linha digitável" : boleto });
+            //}
+            //catch (Exception ex)
+            //{
+            //    return View("/Views/Home/Index.cshtml", new BoletoViewModel { LinhaBoleto = "", MensagemErro = "Ops! Houve uma falha: " + ex.Message  });
+            //}
         }
     }
 }

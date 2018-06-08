@@ -69,7 +69,9 @@ namespace LeitorBoleto.Models
             {
                 if (annotation.Description != null)
                 {
-                    boleto = ValidarLinhaBoleto(annotation.Description).FirstOrDefault()?.Value;
+                    var valores = ValidarLinhaBoleto(annotation.Description);
+                    if (valores.Count > 0)
+                        boleto = valores[0].Value;
 
                     if (!string.IsNullOrEmpty(boleto))
                         break;

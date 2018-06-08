@@ -9,5 +9,10 @@ namespace LeitorBoleto.Controllers
         {
             return View(new BoletoViewModel());
         }
+
+        public IActionResult Error()
+        {
+            return View("Index", new BoletoViewModel() { MensagemErro = "Ops! Houve uma falha, por favor, tente novamente." });
+        }
     }
 }
