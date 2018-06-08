@@ -5,6 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System;
+using Google.Apis.Auth.OAuth2;
+using Grpc.Core;
+using Grpc.Auth;
 
 namespace LeitorBoleto.Models
 {
@@ -17,12 +20,12 @@ namespace LeitorBoleto.Models
             Pdf = pdf;
         }
 
-        public string ObterCodigoBarras()
+        public string ObterCodigoBarras(string googleCredentialPath)
         {
             using (var pdfStream = Pdf.OpenReadStream())
             {
                 var imagem = GerarImagem(pdfStream);
-                return LerImagem(imagem);
+                return LerImagem(imagem, googleCredentialPath);
             }
         }
 
@@ -52,11 +55,13 @@ namespace LeitorBoleto.Models
             }
         }
 
-        private string LerImagem(string nomeArquivo)
+        private string LerImagem(string nomeArquivo, string googleCredentialPath)
         {
             var boleto = "";
+            var credencialGoogle = GoogleCredential.FromFile(googleCredentialPath);
+            var canalApi = new Channel(ImageAnnotatorClient.DefaultEndpoint.Host, credencialGoogle.ToChannelCredentials());
+            var client = ImageAnnotatorClient.Create(canalApi);
             var imagem = Directory.GetFiles(Path.GetTempPath(), nomeArquivo);
-            var client = ImageAnnotatorClient.Create();
             var image = Image.FromFile(imagem[0]);
             var response = client.DetectText(image);
 
