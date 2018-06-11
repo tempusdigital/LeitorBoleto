@@ -1,13 +1,9 @@
-﻿using Google.Cloud.Vision.V1;
-using ImageMagick;
+﻿using ImageMagick;
 using Microsoft.AspNetCore.Http;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System;
-using Google.Apis.Auth.OAuth2;
-using Grpc.Core;
-using Grpc.Auth;
+using Tesseract;
 
 namespace LeitorBoleto.Models
 {
@@ -24,8 +20,19 @@ namespace LeitorBoleto.Models
         {
             using (var pdfStream = Pdf.OpenReadStream())
             {
-                var imagem = GerarImagem(pdfStream);
-                return LerImagem(imagem, googleCredentialPath);
+                var caminhoImagem = GerarImagem(pdfStream);
+                var boleto = "";
+
+                try
+                {
+                    boleto = LerImagem(caminhoImagem);
+                }
+                finally
+                {
+                    RemoverArquivo(caminhoImagem);
+                }
+
+                return boleto;
             }
         }
 
@@ -45,42 +52,37 @@ namespace LeitorBoleto.Models
 
                 using (var imagem = images.AppendHorizontally())
                 {
-                    var temp = Path.GetTempPath();
-                    var nomeArquivo = Guid.NewGuid().ToString() + ".png";
+                    var caminhoArquivo = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".png");
                     imagem.Format = MagickFormat.Png;
-                    imagem.Write(temp + nomeArquivo);
+                    imagem.Write(caminhoArquivo);
 
-                    return nomeArquivo;
+                    return caminhoArquivo;
                 }
             }
         }
 
-        private string LerImagem(string nomeArquivo, string googleCredentialPath)
+        private string LerImagem(string caminhoArquivo)
         {
-            var boleto = "";
-            var credencialGoogle = GoogleCredential.FromFile(googleCredentialPath);
-            var canalApi = new Channel(ImageAnnotatorClient.DefaultEndpoint.Host, credencialGoogle.ToChannelCredentials());
-            var client = ImageAnnotatorClient.Create(canalApi);
-            var imagem = Directory.GetFiles(Path.GetTempPath(), nomeArquivo);
-            var image = Image.FromFile(imagem[0]);
-            var response = client.DetectText(image);
-
-            foreach (var annotation in response)
+            using (var engine = new TesseractEngine(Directory.GetCurrentDirectory() + "\\tessdata", "hin", EngineMode.CubeOnly))
             {
-                if (annotation.Description != null)
-                {
-                    var valores = ValidarLinhaBoleto(annotation.Description);
-                    if (valores.Count > 0)
-                        boleto = valores[0].Value;
+                engine.SetVariable("load_system_dawg", false);
+                engine.SetVariable("load_freq_dawg", false);
 
-                    if (!string.IsNullOrEmpty(boleto))
-                        break;
+                using (var img = Pix.LoadFromFile(caminhoArquivo))
+                {
+                    img.ConvertRGBToGray();
+
+                    using (var page = engine.Process(img))
+                    {
+                        var valores = ValidarLinhaBoleto(page.GetText());
+
+                        if (valores.Count > 0)
+                            return valores[0].Value;
+                    }
                 }
             }
 
-            RemoverArquivo(imagem[0]);
-
-            return boleto;
+            return "";
         }
 
         private void RemoverArquivo(string imagem)
@@ -90,7 +92,7 @@ namespace LeitorBoleto.Models
 
         private MatchCollection ValidarLinhaBoleto(string input)
         {
-            return Regex.Matches(input, @"\d{5}\.\d{5} \d{5}\.\d{6} \d{5}\.\d{6} \d \d{14}");
+            return Regex.Matches(input, @"\d{5}(\.)?\d{5}(\s)?\d{5}(\.)?\d{6}(\s)?\d{5}(\.)?\d{6}(\s)?\d(\s)?\d{14}");
         }
     }
 }
