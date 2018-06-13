@@ -39,6 +39,13 @@ namespace LeitorBoleto
                 app.UseExceptionHandler("/Home/Error");
             }
 
+            app.Use(async (context, next) =>
+            {
+                context.Response.Headers.Remove("X-Frame-Options");
+                context.Response.Headers.Add("X-Frame-Options", "AllowAll");
+                await next();
+            });
+
             app.UseStaticFiles();
 
             app.UseMvc(routes =>
