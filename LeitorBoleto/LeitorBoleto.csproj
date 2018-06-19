@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
     <UserSecretsId>d069f2d4-693c-4b64-813d-0dffc39adb99</UserSecretsId>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
