@@ -5,14 +5,30 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System;
+using System.Threading;
 using Google.Apis.Auth.OAuth2;
 using Grpc.Core;
 using Grpc.Auth;
+using System.Threading.Tasks;
 
 namespace LeitorBoleto.Models
 {
     public class Boleto
     {
+        private static ImageAnnotatorClient _googleClient;
+        
+        private static ImageAnnotatorClient GetGoogleClient(string googleCredentialPath)
+        {
+            if (_googleClient == null)
+            {
+                var credencialGoogle = GoogleCredential.FromFile(googleCredentialPath);
+                var canalApi = new Channel(ImageAnnotatorClient.DefaultEndpoint.Host, credencialGoogle.ToChannelCredentials());
+                _googleClient = ImageAnnotatorClient.Create(canalApi);
+            }
+
+            return _googleClient;
+        }
+
         public IFormFile Pdf { get; set; }
 
         public Boleto(IFormFile pdf)
@@ -20,12 +36,23 @@ namespace LeitorBoleto.Models
             Pdf = pdf;
         }
 
-        public string ObterCodigoBarras(string googleCredentialPath)
+        public async Task<string> ObterCodigoBarras(string googleCredentialPath)
         {
             using (var pdfStream = Pdf.OpenReadStream())
             {
-                var imagem = GerarImagem(pdfStream);
-                return LerImagem(imagem, googleCredentialPath);
+                var caminhoImagem = GerarImagem(pdfStream);
+                var boleto = "";
+
+                try
+                {
+                    boleto = await LerImagem(caminhoImagem, googleCredentialPath);
+                }
+                finally
+                {
+                    RemoverArquivo(caminhoImagem);
+                }
+
+                return boleto;
             }
         }
 
@@ -45,25 +72,22 @@ namespace LeitorBoleto.Models
 
                 using (var imagem = images.AppendHorizontally())
                 {
-                    var temp = Path.GetTempPath();
-                    var nomeArquivo = Guid.NewGuid().ToString() + ".png";
+                    var caminhoArquivo = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".png");
                     imagem.Format = MagickFormat.Png;
-                    imagem.Write(temp + nomeArquivo);
+                    imagem.Write(caminhoArquivo);
 
-                    return nomeArquivo;
+                    return caminhoArquivo;
                 }
             }
         }
 
-        private string LerImagem(string nomeArquivo, string googleCredentialPath)
+        private async Task<string> LerImagem(string caminhoImagem, string googleCredentialPath)
         {
             var boleto = "";
-            var credencialGoogle = GoogleCredential.FromFile(googleCredentialPath);
-            var canalApi = new Channel(ImageAnnotatorClient.DefaultEndpoint.Host, credencialGoogle.ToChannelCredentials());
-            var client = ImageAnnotatorClient.Create(canalApi);
-            var imagem = Directory.GetFiles(Path.GetTempPath(), nomeArquivo);
-            var image = Image.FromFile(imagem[0]);
-            var response = client.DetectText(image);
+            var client = GetGoogleClient(googleCredentialPath);
+            
+            var image = await Image.FromFileAsync(caminhoImagem);
+            var response = await client.DetectTextAsync(image);
 
             foreach (var annotation in response)
             {
@@ -77,8 +101,6 @@ namespace LeitorBoleto.Models
                         break;
                 }
             }
-
-            RemoverArquivo(imagem[0]);
 
             return boleto;
         }
